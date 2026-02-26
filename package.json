@@ -1,0 +1,22 @@
+{
+    "name": "pdf2md-lite",
+    "version": "1.0.0",
+    "description": "Lightweight batch PDF-to-Markdown converter",
+    "main": "server.js",
+    "license": "MIT",
+    "keywords": [
+        "pdf",
+        "markdown",
+        "converter",
+        "batch",
+        "pdf2md"
+    ],
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node server.js"
+    },
+    "dependencies": {
+        "@opendocsg/pdf2md": "latest",
+        "express": "^4.21.0"
+    }
+}
