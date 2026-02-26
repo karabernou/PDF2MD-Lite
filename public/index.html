@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF2MD Lite — Batch Converter</title>
+  <meta name="description" content="Lightweight batch PDF-to-Markdown converter" />
+  <style>
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('./fonts/Inter-400.ttf') format('truetype');
+    }
+
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+      src: url('./fonts/Inter-500.ttf') format('truetype');
+    }
+
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 600;
+      font-display: swap;
+      src: url('./fonts/Inter-600.ttf') format('truetype');
+    }
+
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url('./fonts/Inter-700.ttf') format('truetype');
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #f8f9fb;
+      --surface: #ffffff;
+      --surface-hover: #f3f4f6;
+      --border: #e5e7eb;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.15);
+      --accent-light: rgba(99, 102, 241, 0.06);
+      --green: #10b981;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --blue: #3b82f6;
+      --radius: 14px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 760px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 14px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+    }
+
+    h1 {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      letter-spacing: 0.2px;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+      position: relative;
+    }
+
+    .card:hover {
+      border-color: rgba(99, 102, 241, 0.25);
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+      transform: translateY(-1px);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+
+    /* Inputs */
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]::placeholder {
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-outline {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-outline:hover:not(:disabled) {
+      background: var(--surface-hover);
+      border-color: #d1d5db;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white;
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      box-shadow: 0 4px 20px var(--accent-glow);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    /* File List */
+    .file-list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .file-count {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .file-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .file-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .file-table td {
+      padding: 10px 12px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    .file-table tr:hover td {
+      background: var(--accent-light);
+    }
+
+    .file-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .file-name {
+      font-weight: 500;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .file-icon {
+      width: 16px;
+      height: 16px;
+      opacity: 0.5;
+    }
+
+    /* Status Badges */
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .status.flash {
+      animation: statusFlash 0.4s ease;
+    }
+
+    @keyframes statusFlash {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.15);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .status--idle {
+      color: var(--text-muted);
+      background: #f3f4f6;
+    }
+
+    .status--idle .status-dot {
+      background: var(--text-muted);
+    }
+
+    .status--pending {
+      color: #b45309;
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .status--pending .status-dot {
+      background: var(--yellow);
+    }
+
+    .status--converting {
+      color: #1d4ed8;
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .status--converting .status-dot {
+      background: var(--blue);
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    .status--converted {
+      color: #059669;
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .status--converted .status-dot {
+      background: var(--green);
+      box-shadow: 0 0 4px rgba(16, 185, 129, 0.4);
+    }
+
+    .status--error {
+      color: #dc2626;
+      background: rgba(239, 68, 68, 0.08);
+    }
+
+    .status--error .status-dot {
+      background: var(--red);
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(0.8);
+      }
+    }
+
+    /* Empty State */
+    .empty-state {
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .empty-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      opacity: 0.3;
+    }
+
+    /* Progress summary */
+    .progress-bar-container {
+      margin-top: 14px;
+      display: none;
+    }
+
+    .progress-bar-container.active {
+      display: block;
+    }
+
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: #e5e7eb;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #6366f1, #10b981);
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    /* Scrollable file area */
+    .file-list-scroll {
+      max-height: 400px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #d1d5db transparent;
+    }
+
+    .file-list-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .file-list-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .file-list-scroll::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 3px;
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--text);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 100;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success {
+      border-left: 3px solid var(--green);
+    }
+
+    .toast.error {
+      border-left: 3px solid var(--red);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 32px 0 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      opacity: 0.6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+
+    .footer a:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
+
+    .footer-sep {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      body {
+        padding: 20px 12px;
+      }
+
+      .container {
+        max-width: 100%;
+      }
+
+      h1 {
+        font-size: 26px;
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      .input-row {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        Server-side conversion
+      </div>
+      <h1>PDF2MD Lite</h1>
+      <p class="subtitle">Batch convert PDF files to clean Markdown</p>
+    </div>
+
+    <!-- Configuration Card -->
+    <div class="card">
+      <div class="card-title">Configuration</div>
+
+      <div class="field">
+        <label for="pdfDir">PDF Directory</label>
+        <div class="input-row">
+          <input type="text" id="pdfDir" placeholder="e.g. D:\docs\pdfs" />
+          <button class="btn btn-outline" id="scanBtn" onclick="scanDirectory()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            Scan
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="mdDir">Output (Markdown) Directory</label>
+        <input type="text" id="mdDir" placeholder="Leave empty to use PDF directory" />
+        <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block; opacity: 0.7;">If
+          empty, converted files will be saved alongside the PDFs</span>
+      </div>
+    </div>
+
+    <!-- File List Card -->
+    <div class="card">
+      <div class="file-list-header">
+        <div class="card-title" style="margin-bottom:0">Files</div>
+        <span class="file-count" id="fileCount"></span>
+      </div>
+
+      <div id="fileListArea">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">📄</div>
+          Enter a PDF directory above and click <strong>Scan</strong>
+        </div>
+      </div>
+
+      <div class="progress-bar-container" id="progressContainer">
+        <div class="progress-info">
+          <span id="progressLabel">Converting...</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 18px; text-align: right;">
+        <button class="btn btn-primary" id="convertBtn" onclick="batchConvert()" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 3 21 3 21 8" />
+            <line x1="4" y1="20" x2="21" y2="3" />
+            <polyline points="21 16 21 21 16 21" />
+            <line x1="15" y1="15" x2="21" y2="21" />
+            <line x1="4" y1="4" x2="9" y2="9" />
+          </svg>
+          Batch Convert
+        </button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <span>PDF2MD Lite v1.0.0</span>
+      <span class="footer-sep"></span>
+      <span>MIT License</span>
+      <span class="footer-sep"></span>
+      <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let fileList = [];
+    let isConverting = false;
+
+    function showToast(msg, type = "success") {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.className = "toast " + type + " show";
+      setTimeout(() => { t.classList.remove("show"); }, 3000);
+    }
+
+    function renderFileList() {
+      const area = document.getElementById("fileListArea");
+      const countEl = document.getElementById("fileCount");
+
+      if (fileList.length === 0) {
+        area.innerHTML = `
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">📄</div>
+            Enter a PDF directory above and click <strong>Scan</strong>
+          </div>`;
+        countEl.textContent = "";
+        document.getElementById("convertBtn").disabled = true;
+        return;
+      }
+
+      countEl.textContent = fileList.length + " file" + (fileList.length !== 1 ? "s" : "");
+      document.getElementById("convertBtn").disabled = isConverting;
+
+      let html = `<div class="file-list-scroll"><table class="file-table">
+        <thead><tr><th>File</th><th style="text-align:right">Status</th></tr></thead><tbody>`;
+
+      for (const f of fileList) {
+        const statusClass = "status--" + f.status;
+        const label = f.status === "idle" ? "---" : f.status;
+        html += `<tr data-file="${escapeAttr(f.name)}">
+          <td>
+            <span class="file-name">
+              <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              ${escapeHtml(f.name)}
+            </span>
+          </td>
+          <td style="text-align:right">
+            <span class="status ${statusClass}" id="status-${cssId(f.name)}">
+              <span class="status-dot"></span>
+              ${label}
+            </span>
+          </td>
+        </tr>`;
+      }
+
+      html += `</tbody></table></div>`;
+      area.innerHTML = html;
+    }
+
+    // Update a single file's status badge in-place (no full re-render)
+    function updateFileStatus(fileName, newStatus) {
+      const el = document.getElementById("status-" + cssId(fileName));
+      if (!el) return;
+      const label = newStatus === "idle" ? "---" : newStatus;
+      el.className = "status status--" + newStatus + " flash";
+      el.innerHTML = `<span class="status-dot"></span>${label}`;
+      // Also scroll the row into view if converting
+      const row = document.querySelector(`tr[data-file="${escapeAttr(fileName)}"]`);
+      if (row && newStatus === "converting") {
+        row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    }
+
+    function cssId(name) {
+      return name.replace(/[^a-zA-Z0-9]/g, "_");
+    }
+
+    function escapeAttr(s) {
+      return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function escapeHtml(s) {
+      const d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    async function scanDirectory() {
+      const pdfDir = document.getElementById("pdfDir").value.trim();
+      if (!pdfDir) {
+        showToast("Enter a PDF directory path first", "error");
+        return;
+      }
+
+      const btn = document.getElementById("scanBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Scanning';
+
+      try {
+        const res = await fetch("/api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pdfDir }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showToast(data.error || "Scan failed", "error");
+          return;
+        }
+
+        fileList = data.files.map((name) => ({ name, status: "idle" }));
+        renderFileList();
+
+        if (fileList.length === 0) {
+          showToast("No PDF files found in that directory", "error");
+        } else {
+          showToast(`Found ${fileList.length} PDF file${fileList.length > 1 ? "s" : ""}`);
+        }
+      } catch (err) {
+        showToast("Failed to connect to server", "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Scan`;
+      }
+    }
+
+    async function batchConvert() {
+      const pdfDir = document.getElementById("pdfDir").value.trim();
+      const mdDir = document.getElementById("mdDir").value.trim() || pdfDir;
+
+      if (!pdfDir) {
+        showToast("PDF directory is required", "error");
+        return;
+      }
+
+      if (fileList.length === 0) {
+        showToast("No files to convert. Scan a directory first.", "error");
+        return;
+      }
+
+      isConverting = true;
+      const btn = document.getElementById("convertBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Converting...';
+
+      const progressContainer = document.getElementById("progressContainer");
+      const progressFill = document.getElementById("progressFill");
+      const progressPercent = document.getElementById("progressPercent");
+      const progressLabel = document.getElementById("progressLabel");
+      progressContainer.classList.add("active");
+      progressFill.style.width = "0%";
+
+      let completed = 0;
+      const total = fileList.length;
+
+      try {
+        const response = await fetch("/api/convert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pdfDir,
+            mdDir,
+            files: fileList.map((f) => f.name),
+          }),
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const json = line.slice(6);
+            try {
+              const msg = JSON.parse(json);
+
+              if (msg.type === "status") {
+                const idx = fileList.findIndex((f) => f.name === msg.file);
+                if (idx !== -1) {
+                  fileList[idx].status = msg.status;
+                  updateFileStatus(msg.file, msg.status);
+                  if (msg.status === "converted" || msg.status === "error") {
+                    completed++;
+                    const pct = Math.round((completed / total) * 100);
+                    progressFill.style.width = pct + "%";
+                    progressPercent.textContent = pct + "%";
+                    progressLabel.textContent = `Converting... ${completed}/${total}`;
+                  }
+                }
+              }
+
+              if (msg.type === "done") {
+                const errors = fileList.filter((f) => f.status === "error").length;
+                const converted = fileList.filter((f) => f.status === "converted").length;
+                progressLabel.textContent = "Done!";
+                if (errors > 0) {
+                  showToast(`Converted ${converted} files, ${errors} error(s)`, "error");
+                } else {
+                  showToast(`All ${converted} files converted successfully!`);
+                }
+              }
+
+              if (msg.type === "fatal") {
+                showToast(msg.error, "error");
+              }
+            } catch (e) { }
+          }
+        }
+      } catch (err) {
+        showToast("Connection error: " + err.message, "error");
+      } finally {
+        isConverting = false;
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg> Batch Convert`;
+      }
+    }
+
+    // Allow Enter key to trigger scan
+    document.getElementById("pdfDir").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") scanDirectory();
+    });
+  </script>
+</body>
+
+</html>
